@@ -1,0 +1,28 @@
+# Maven
+target/
+
+# Java compilado
+*.class
+*.log
+
+# NetBeans: configuraciones locales
+nbproject/private/
+nbbuild/
+private/
+
+# IDE y herramientas locales
+.idea/
+.vscode/
+*.iml
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Secretos y configuración local
+.env
+.env.*
+!.env.example
+
+# Archivos de configuración privada de la aplicación
+application-local.properties
