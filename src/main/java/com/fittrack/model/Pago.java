@@ -1,48 +1,85 @@
-
 package com.fittrack.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class Pago {
 
     private int idPago;
+    private int idMembresia;
+    private Integer idEmpleado;
     private LocalDate fechaPago;
-    private double monto;
+    private BigDecimal monto;
     private String metodoPago;
 
-    public Pago(int idPago, LocalDate fechaPago,
-                double monto, String metodoPago) {
+    // Constructor para registrar un pago nuevo.
+    public Pago(int idMembresia,
+            Integer idEmpleado,
+            LocalDate fechaPago,
+            BigDecimal monto,
+            String metodoPago) {
 
-        if (monto <= 0) {
+        if (idMembresia <= 0) {
             throw new IllegalArgumentException(
-                "El monto debe ser mayor que cero."
+                    "El identificador de la membresía debe ser válido."
             );
         }
 
-        this.idPago = idPago;
+        if (fechaPago == null) {
+            throw new IllegalArgumentException(
+                    "Debe especificar la fecha del pago."
+            );
+        }
+
+        if (monto == null || monto.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "El monto debe ser mayor que cero."
+            );
+        }
+
+        if (metodoPago == null || metodoPago.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Debe especificar el método de pago."
+            );
+        }
+
+        this.idPago = 0;
+        this.idMembresia = idMembresia;
+        this.idEmpleado = idEmpleado;
         this.fechaPago = fechaPago;
         this.monto = monto;
         this.metodoPago = metodoPago;
     }
 
     public void registrarPago() {
-        // El registro definitivo se realizará mediante el DAO
-        // cuando conectemos la aplicación con MySQL.
+        // El registro en MySQL se realiza mediante PagoDAO.
     }
 
     public int getIdPago() {
         return idPago;
     }
 
+    public int getIdMembresia() {
+        return idMembresia;
+    }
+
+    public Integer getIdEmpleado() {
+        return idEmpleado;
+    }
+
     public LocalDate getFechaPago() {
         return fechaPago;
     }
 
-    public double getMonto() {
+    public BigDecimal getMonto() {
         return monto;
     }
 
     public String getMetodoPago() {
         return metodoPago;
+    }
+
+    public void setIdPago(int idPago) {
+        this.idPago = idPago;
     }
 }
