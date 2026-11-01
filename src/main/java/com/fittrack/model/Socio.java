@@ -1,4 +1,3 @@
-
 package com.fittrack.model;
 
 import java.time.LocalDate;
@@ -14,7 +13,7 @@ public class Socio {
     private estadoSocio estado;
 
     public Socio(int idSocio, String nombre, String apellido,
-                 String correo, String telefono) {
+            String correo, String telefono) {
         this.idSocio = idSocio;
         this.nombre = nombre;
         this.apellido = apellido;
@@ -27,7 +26,7 @@ public class Socio {
     public void asignarMembresia(Membresia m) {
         if (m == null) {
             throw new IllegalArgumentException(
-                "La membresía no puede ser nula."
+                    "La membresía no puede ser nula."
             );
         }
 
@@ -36,7 +35,7 @@ public class Socio {
     }
 
     public void actualizarDatos(String nombre, String apellido,
-                                String correo, String telefono) {
+            String correo, String telefono) {
         this.nombre = nombre;
         this.apellido = apellido;
         this.correo = correo;
@@ -46,7 +45,7 @@ public class Socio {
     public void cambiarEstado(estadoSocio nuevoEstado) {
         if (nuevoEstado == null) {
             throw new IllegalArgumentException(
-                "El estado no puede ser nulo."
+                    "El estado no puede ser nulo."
             );
         }
 
@@ -97,5 +96,18 @@ public class Socio {
 
     public estadoSocio getEstado() {
         return estado;
+    }
+
+    public Socio(int idSocio, String nombre, String apellido,
+            String correo, String telefono,
+            LocalDate fechaRegistro, estadoSocio estado) {
+
+        this.idSocio = idSocio;
+        this.nombre = nombre;
+        this.apellido = apellido;
+        this.correo = correo;
+        this.telefono = telefono;
+        this.fechaRegistro = fechaRegistro;
+        this.estado = estado;
     }
 }

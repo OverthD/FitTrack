@@ -1,4 +1,3 @@
-
 package com.fittrack;
 
 import javafx.application.Application;
@@ -7,14 +6,16 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
+import com.fittrack.database.PruebaConexion;
+
 public class FitTrack extends Application {
 
     @Override
     public void start(Stage stage) {
         Label mensaje = new Label("FitTrack");
         mensaje.setStyle(
-            "-fx-font-size: 28px;" +
-            "-fx-font-weight: bold;"
+                "-fx-font-size: 28px;"
+                + "-fx-font-weight: bold;"
         );
 
         StackPane root = new StackPane(mensaje);
@@ -26,6 +27,23 @@ public class FitTrack extends Application {
     }
 
     public static void main(String[] args) {
-        launch(args);
+        PruebaConexion.probar();
+        //PruebaSocioDAO.probar();
+
+        /*try {
+            PruebaSocioService.probar();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }*/
+       
+        /*try {
+            PruebaMembresiaService.probar();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }*/
+        
+        PruebaRenovacionMembresia.main(args);
+        
+        //launch(args);
     }
 }

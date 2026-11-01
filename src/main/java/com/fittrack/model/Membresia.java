@@ -1,8 +1,8 @@
 
 package com.fittrack.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 
 public class Membresia {
 
@@ -10,48 +10,72 @@ public class Membresia {
     private tipoMembresia tipo;
     private LocalDate fechaInicio;
     private LocalDate fechaVencimiento;
-    private double precio;
+    private BigDecimal precio;
     private estadoMembresia estado;
 
+    // Constructor para crear una membresía nueva.
     public Membresia(int idMembresia, tipoMembresia tipo,
-                     LocalDate fechaInicio, double precio) {
+                     LocalDate fechaInicio, BigDecimal precio) {
+
         this.idMembresia = idMembresia;
         this.tipo = tipo;
         this.fechaInicio = fechaInicio;
-        this.precio = precio;
+        asignarPrecio(precio);
         this.fechaVencimiento = calcularVencimiento();
         this.estado = calcularEstado();
     }
 
-    public void asignarPrecio(double precio) {
-        if (precio < 0) {
+    // Constructor para recuperar una membresía desde la base de datos.
+    public Membresia(int idMembresia, tipoMembresia tipo,
+                     LocalDate fechaInicio, LocalDate fechaVencimiento,
+                     BigDecimal precio, estadoMembresia estado) {
+
+        this.idMembresia = idMembresia;
+        this.tipo = tipo;
+        this.fechaInicio = fechaInicio;
+        this.fechaVencimiento = fechaVencimiento;
+        asignarPrecio(precio);
+        this.estado = estado;
+    }
+
+    public void asignarPrecio(BigDecimal precio) {
+        if (precio == null || precio.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException(
-                "El precio no puede ser negativo."
+                "El precio no puede ser nulo ni negativo."
             );
         }
+
         this.precio = precio;
     }
 
     public LocalDate calcularVencimiento() {
+
         if (fechaInicio == null || tipo == null) {
-            return null;
+            throw new IllegalStateException(
+                "Se requiere una fecha de inicio y un tipo de membresía."
+            );
         }
 
         switch (tipo) {
             case SEMANAL:
                 return fechaInicio.plusDays(7);
+
             case QUINCENAL:
                 return fechaInicio.plusDays(15);
+
             case MENSUAL:
             case ESTUDIANTE:
                 return fechaInicio.plusMonths(1);
+
             case BIMESTRAL:
                 return fechaInicio.plusMonths(2);
+
             case ANUAL:
                 return fechaInicio.plusMonths(12);
+
             case DOSPERSONAS:
-                // La duración debe configurarse según las reglas del gimnasio.
-                return null;
+                return fechaInicio.plusMonths(1);
+
             default:
                 throw new IllegalStateException(
                     "Tipo de membresía no reconocido."
@@ -60,24 +84,33 @@ public class Membresia {
     }
 
     public estadoMembresia calcularEstado() {
-        if (fechaInicio == null || fechaVencimiento == null) {
-            return estadoMembresia.VENCIDA;
+
+        return calcularEstado(LocalDate.now());
+    }
+
+    // Sobrecarga para facilitar las pruebas con fechas específicas.
+    public estadoMembresia calcularEstado(LocalDate fechaConsulta) {
+
+        if (fechaConsulta == null || fechaInicio == null
+                || fechaVencimiento == null || tipo == null) {
+            throw new IllegalStateException(
+                "No se puede calcular el estado con datos incompletos."
+            );
         }
 
-        LocalDate hoy = LocalDate.now();
-
-        if (hoy.isBefore(fechaInicio)) {
+        if (fechaConsulta.isBefore(fechaInicio)) {
             return estadoMembresia.PROGRAMADA;
         }
 
-        if (!hoy.isAfter(fechaVencimiento)) {
+        if (!fechaConsulta.isAfter(fechaVencimiento)) {
             return estadoMembresia.VIGENTE;
         }
 
         if (tipo == tipoMembresia.MENSUAL) {
+
             LocalDate finTolerancia = fechaVencimiento.plusDays(3);
 
-            if (!hoy.isAfter(finTolerancia)) {
+            if (!fechaConsulta.isAfter(finTolerancia)) {
                 return estadoMembresia.TOLERANCIA;
             }
         }
@@ -85,18 +118,20 @@ public class Membresia {
         return estadoMembresia.VENCIDA;
     }
 
+    // Actualiza el estado almacenado en el objeto.
+    public void actualizarEstado() {
+        this.estado = calcularEstado();
+    }
+
     public boolean permitirAcceso() {
+
         estadoMembresia estadoActual = calcularEstado();
 
         return estadoActual == estadoMembresia.VIGENTE
             || estadoActual == estadoMembresia.TOLERANCIA;
     }
 
-    public void renovar() {
-        fechaInicio = LocalDate.now();
-        fechaVencimiento = calcularVencimiento();
-        estado = calcularEstado();
-    }
+    // Getters
 
     public int getIdMembresia() {
         return idMembresia;
@@ -114,12 +149,11 @@ public class Membresia {
         return fechaVencimiento;
     }
 
-    public double getPrecio() {
+    public BigDecimal getPrecio() {
         return precio;
     }
 
     public estadoMembresia getEstado() {
-        estado = calcularEstado();
         return estado;
     }
 }

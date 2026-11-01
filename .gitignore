@@ -26,3 +26,6 @@ Thumbs.db
 
 # Archivos de configuración privada de la aplicación
 application-local.properties
+
+# Configuracion local de base de datos
+src/main/resources/db.properties
