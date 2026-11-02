@@ -26,7 +26,7 @@ public class FitTrack extends Application {
         stage.show();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         PruebaConexion.probar();
         //PruebaSocioDAO.probar();
 
@@ -42,7 +42,7 @@ public class FitTrack extends Application {
             e.printStackTrace();
         }*/
         
-        PruebaRenovacionMembresia.main(args);
+        PruebaMembresiaService.main(args);
         
         //launch(args);
     }
