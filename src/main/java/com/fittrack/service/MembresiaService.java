@@ -30,12 +30,15 @@ public class MembresiaService {
     private final PagoDAO pagoDAO;
     private final SocioDAO socioDAO;
     private final SocioMembresiaDAO socioMembresiaDAO;
+    private final AcreditacionEstudianteService acreditacionEstudianteService;
 
     public MembresiaService() {
         this.membresiaDAO = new MembresiaDAO();
         this.pagoDAO = new PagoDAO();
         this.socioDAO = new SocioDAO();
         this.socioMembresiaDAO = new SocioMembresiaDAO();
+        this.acreditacionEstudianteService
+                = new AcreditacionEstudianteService();
     }
 
     // Registrar una membresía, asociarla con uno o dos socios
@@ -83,6 +86,10 @@ public class MembresiaService {
 
         if (idSocio2 != null) {
             validarSocio(idSocio2);
+        }
+        // Verificar que el socio tenga acreditación estudiantil vigente.
+        if (tipo == tipoMembresia.ESTUDIANTE) {
+            validarAcreditacionEstudiantil(idSocio1);
         }
 
         Membresia membresia = new Membresia(
@@ -243,6 +250,10 @@ public class MembresiaService {
         // Verificar que los socios continúen activos.
         for (int idSocio : idsSocios) {
             validarSocio(idSocio);
+        }
+        // Verificar la acreditación cuando la nueva membresía sea estudiantil.
+        if (nuevoTipo == tipoMembresia.ESTUDIANTE) {
+            validarAcreditacionEstudiantil(idsSocios.get(0));
         }
 
         // La nueva membresía comienza después del periodo
@@ -477,6 +488,24 @@ public class MembresiaService {
         }
 
         return fechaFin;
+    }
+
+    // Validar que el socio tenga una acreditación estudiantil vigente.
+    private void validarAcreditacionEstudiantil(int idSocio)
+            throws SQLException, IOException {
+
+        boolean tieneAcreditacion
+                = acreditacionEstudianteService.tieneAcreditacionVigente(
+                        idSocio
+                );
+
+        if (!tieneAcreditacion) {
+            throw new IllegalArgumentException(
+                    "El socio con identificador " + idSocio
+                    + " no cuenta con una acreditación estudiantil vigente. "
+                    + "Debe registrar un comprobante actualizado."
+            );
+        }
     }
 
 }

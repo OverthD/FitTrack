@@ -42,7 +42,7 @@ public class FitTrack extends Application {
             e.printStackTrace();
         }*/
         
-        PruebaMembresiaService.main(args);
+        PruebaMembresiaEstudiante.main(args);
         
         //launch(args);
     }
