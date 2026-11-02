@@ -22,6 +22,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fittrack.util.SesionUsuario;
+
 public class MembresiaService {
 
     private final MembresiaDAO membresiaDAO;
@@ -95,7 +97,8 @@ public class MembresiaService {
         if (idSocio2 != null) {
             validarDisponibilidadMembresia(idSocio2, membresia);
         }
-
+        // Obtener el identificador del usuario que realiza la operación.
+        int idEmpleado = SesionUsuario.obtenerIdEmpleado();
         try (Connection conexion = Conexion.conectar()) {
 
             conexion.setAutoCommit(false);
@@ -126,7 +129,7 @@ public class MembresiaService {
                 // 4. Crear el pago con el mismo precio de la membresía.
                 Pago pago = new Pago(
                         idMembresia,
-                        null,
+                        idEmpleado,
                         LocalDate.now(),
                         membresia.getPrecio(),
                         metodoPago
@@ -270,6 +273,8 @@ public class MembresiaService {
             );
         }
 
+        // Obtener el identificador del usuario que realiza la renovación.
+        int idEmpleado = SesionUsuario.obtenerIdEmpleado();
         // Registrar membresía, asociaciones y pago en una transacción.
         try (Connection conexion = Conexion.conectar()) {
 
@@ -294,7 +299,7 @@ public class MembresiaService {
                 // 3. Crear el pago correspondiente a la renovación.
                 Pago nuevoPago = new Pago(
                         nuevoIdMembresia,
-                        null,
+                        idEmpleado,
                         LocalDate.now(),
                         nuevaMembresia.getPrecio(),
                         metodoPago
@@ -474,5 +479,4 @@ public class MembresiaService {
         return fechaFin;
     }
 
-    
 }

@@ -6,17 +6,27 @@ import com.fittrack.dao.PagoDAO;
 import com.fittrack.model.Membresia;
 import com.fittrack.model.Pago;
 import com.fittrack.model.tipoMembresia;
+import com.fittrack.service.UsuarioSistemaService;
+import java.io.IOException;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+
 public class PruebaMembresiaService {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SQLException, IOException {
 
         MembresiaService servicio = new MembresiaService();
         SocioService socioService = new SocioService();
         PagoDAO pagoDAO = new PagoDAO();
+        UsuarioSistemaService usuarioService = new UsuarioSistemaService();
+
+        usuarioService.iniciarSesion(
+                "admin_prueba",
+                "FitTrack2026!"
+        );
 
         System.out.println("=== PRUEBA 6: MEMBRESÍA EN TOLERANCIA Y REGISTRO DE PAGO ===");
 
@@ -86,7 +96,7 @@ public class PruebaMembresiaService {
             System.out.println("ERROR DURANTE LA PRUEBA:");
             e.printStackTrace();
         }
-
+        usuarioService.cerrarSesion();
         /*System.out.println("=== PRUEBA 5: SOCIO OCUPADO EN MEMBRESÍA COMPARTIDA ===");
 
         try {
