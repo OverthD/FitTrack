@@ -11,6 +11,7 @@ import com.fittrack.model.Socio;
 import com.fittrack.model.tipoMembresia;
 import com.fittrack.model.estadoMembresia;
 import com.fittrack.model.estadoSocio;
+import com.fittrack.model.MembresiaReporte;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -376,6 +377,76 @@ public class MembresiaService {
             throws SQLException, IOException {
 
         List<Membresia> membresias = membresiaDAO.listarTodas();
+
+        for (Membresia membresia : membresias) {
+            sincronizarEstado(membresia);
+        }
+
+        return membresias;
+    }
+
+    // Generar el reporte de membresías con filtro opcional por estado.
+    // Solamente el administrador puede consultar este reporte.
+    public List<MembresiaReporte> generarReporteMembresias(
+            estadoMembresia estadoFiltro)
+            throws SQLException, IOException {
+
+        // Verificar que exista una sesión administrativa.
+        if (!SesionUsuario.haySesionActiva()
+                || !SesionUsuario.esAdministrador()) {
+
+            throw new SecurityException(
+                    "No tiene permisos para generar el reporte "
+                    + "de membresías. Se requiere un administrador."
+            );
+        }
+
+        // Obtener los datos del reporte desde la base de datos.
+        List<MembresiaReporte> todasLasMembresias
+                = membresiaDAO.listarDatosReporte();
+
+        // Si no se especifica un estado, devolver todos los registros.
+        if (estadoFiltro == null) {
+            return todasLasMembresias;
+        }
+
+        // Filtrar las membresías por el estado solicitado.
+        List<MembresiaReporte> resultado = new ArrayList<>();
+
+        for (MembresiaReporte membresia : todasLasMembresias) {
+
+            if (membresia.getEstado() == estadoFiltro) {
+                resultado.add(membresia);
+            }
+        }
+
+        return resultado;
+    }
+
+    // Generar el reporte completo, sin aplicar filtros.
+    public List<MembresiaReporte> generarReporteMembresias()
+            throws SQLException, IOException {
+
+        return generarReporteMembresias(null);
+    }
+
+    // Consultar membresías próximas a vencer.
+    public List<Membresia> consultarProximasAVencer(int dias)
+            throws SQLException, IOException {
+
+        if (dias <= 0) {
+            throw new IllegalArgumentException(
+                    "El periodo de consulta debe ser mayor que cero."
+            );
+        }
+
+        LocalDate fechaConsulta = LocalDate.now();
+
+        List<Membresia> membresias
+                = membresiaDAO.listarProximasAVencer(
+                        fechaConsulta,
+                        dias
+                );
 
         for (Membresia membresia : membresias) {
             sincronizarEstado(membresia);

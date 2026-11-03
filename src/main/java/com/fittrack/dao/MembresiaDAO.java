@@ -1,7 +1,9 @@
+
 package com.fittrack.dao;
 
 import com.fittrack.database.Conexion;
 import com.fittrack.model.Membresia;
+import com.fittrack.model.MembresiaReporte;
 import com.fittrack.model.tipoMembresia;
 import com.fittrack.model.estadoMembresia;
 
@@ -13,6 +15,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Date;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,7 +69,8 @@ public class MembresiaDAO {
             WHERE idMembresia = ?
             """;
 
-        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar();
+             PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setInt(1, idMembresia);
 
@@ -90,7 +94,9 @@ public class MembresiaDAO {
             ORDER BY idMembresia
             """;
 
-        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+        try (Connection conexion = Conexion.conectar();
+             PreparedStatement ps = conexion.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
                 membresias.add(convertirMembresia(rs));
@@ -100,7 +106,44 @@ public class MembresiaDAO {
         return membresias;
     }
 
-    public boolean actualizarEstado(int idMembresia,
+    // Consultar membresías próximas a vencer dentro de un periodo.
+    public List<Membresia> listarProximasAVencer(
+            LocalDate fechaConsulta,
+            int dias)
+            throws SQLException, IOException {
+
+        List<Membresia> membresias = new ArrayList<>();
+
+        String sql = """
+            SELECT *
+            FROM membresia
+            WHERE fechaInicio <= ?
+              AND fechaVencimiento >= ?
+              AND fechaVencimiento <= ?
+            ORDER BY fechaVencimiento ASC
+            """;
+
+        LocalDate fechaLimite = fechaConsulta.plusDays(dias);
+
+        try (Connection conexion = Conexion.conectar();
+             PreparedStatement ps = conexion.prepareStatement(sql)) {
+
+            ps.setDate(1, Date.valueOf(fechaConsulta));
+            ps.setDate(2, Date.valueOf(fechaConsulta));
+            ps.setDate(3, Date.valueOf(fechaLimite));
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    membresias.add(convertirMembresia(rs));
+                }
+            }
+        }
+
+        return membresias;
+    }
+
+    public boolean actualizarEstado(
+            int idMembresia,
             estadoMembresia estado)
             throws SQLException, IOException {
 
@@ -110,7 +153,8 @@ public class MembresiaDAO {
             WHERE idMembresia = ?
             """;
 
-        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar();
+             PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setString(1, estado.name());
             ps.setInt(2, idMembresia);
@@ -136,7 +180,7 @@ public class MembresiaDAO {
     }
 
     public List<Integer> listarIdsSociosPorMembresia(int idMembresia)
-            throws SQLException, java.io.IOException {
+            throws SQLException, IOException {
 
         List<Integer> idsSocios = new ArrayList<>();
 
@@ -147,7 +191,8 @@ public class MembresiaDAO {
         ORDER BY idSocio
         """;
 
-        try (Connection conexion = com.fittrack.database.Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar();
+             PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setInt(1, idMembresia);
 
@@ -161,4 +206,92 @@ public class MembresiaDAO {
         return idsSocios;
     }
 
+    // Obtener los datos necesarios para el reporte de membresías.
+    public List<MembresiaReporte> listarDatosReporte()
+            throws SQLException, IOException {
+
+        List<MembresiaReporte> reporte = new ArrayList<>();
+
+        String sql = """
+            SELECT
+                s.idSocio,
+                s.nombre,
+                s.apellido,
+                m.idMembresia,
+                m.tipo,
+                m.fechaInicio,
+                m.fechaVencimiento,
+                m.precio,
+                m.estado
+            FROM socio s
+            INNER JOIN sociomembresia sm
+                ON s.idSocio = sm.idSocio
+            INNER JOIN membresia m
+                ON sm.idMembresia = m.idMembresia
+            ORDER BY m.idMembresia, s.idSocio
+            """;
+
+        try (Connection conexion = Conexion.conectar();
+             PreparedStatement ps = conexion.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+
+                int idSocio = rs.getInt("idSocio");
+                String nombre = rs.getString("nombre");
+                String apellido = rs.getString("apellido");
+
+                int idMembresia = rs.getInt("idMembresia");
+
+                tipoMembresia tipo = tipoMembresia.valueOf(
+                        rs.getString("tipo")
+                );
+
+                Date inicioSQL = rs.getDate("fechaInicio");
+                Date vencimientoSQL = rs.getDate("fechaVencimiento");
+
+                LocalDate fechaInicio = inicioSQL != null
+                        ? inicioSQL.toLocalDate() : null;
+
+                LocalDate fechaVencimiento = vencimientoSQL != null
+                        ? vencimientoSQL.toLocalDate() : null;
+
+                BigDecimal precio = rs.getBigDecimal("precio");
+
+                estadoMembresia estadoPersistido =
+                        estadoMembresia.valueOf(rs.getString("estado"));
+
+                // Calcular el estado actual para el reporte.
+                estadoMembresia estadoActual = estadoPersistido;
+
+                if (fechaInicio != null && fechaVencimiento != null) {
+
+                    Membresia membresia = new Membresia(
+                            idMembresia,
+                            tipo,
+                            fechaInicio,
+                            fechaVencimiento,
+                            precio,
+                            estadoPersistido
+                    );
+
+                    estadoActual = membresia.calcularEstado(LocalDate.now());
+                }
+
+                reporte.add(new MembresiaReporte(
+                        idSocio,
+                        nombre,
+                        apellido,
+                        idMembresia,
+                        tipo,
+                        fechaInicio,
+                        fechaVencimiento,
+                        precio,
+                        estadoActual
+                ));
+            }
+        }
+
+        return reporte;
+    }
 }

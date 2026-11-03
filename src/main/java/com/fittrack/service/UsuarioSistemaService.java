@@ -1,4 +1,3 @@
-
 package com.fittrack.service;
 
 import com.fittrack.dao.UsuarioSistemaDAO;
@@ -29,8 +28,8 @@ public class UsuarioSistemaService {
 
         if (!usuarioDAO.listarTodos().isEmpty()) {
             throw new IllegalStateException(
-                "Ya existen usuarios registrados. "
-                + "El administrador inicial ya fue creado."
+                    "Ya existen usuarios registrados. "
+                    + "El administrador inicial ya fue creado."
             );
         }
 
@@ -41,10 +40,10 @@ public class UsuarioSistemaService {
         String hash = PasswordUtil.generarHash(contrasena);
 
         Administrador administrador = new Administrador(
-            0,
-            nombreUsuario,
-            hash,
-            true
+                0,
+                nombreUsuario,
+                hash,
+                true
         );
 
         return usuarioDAO.registrar(administrador);
@@ -65,10 +64,10 @@ public class UsuarioSistemaService {
         String hash = PasswordUtil.generarHash(contrasena);
 
         Empleado empleado = new Empleado(
-            0,
-            nombreUsuario,
-            hash,
-            true
+                0,
+                nombreUsuario,
+                hash,
+                true
         );
 
         return usuarioDAO.registrar(empleado);
@@ -85,17 +84,17 @@ public class UsuarioSistemaService {
             return null;
         }
 
-        UsuarioSistema encontrado =
-                usuarioDAO.buscarPorUsuario(usuario.trim());
+        UsuarioSistema encontrado
+                = usuarioDAO.buscarPorUsuario(usuario.trim());
 
         if (encontrado == null || !encontrado.isActivo()) {
             return null;
         }
 
-        boolean contrasenaValida =
-                PasswordUtil.verificarContrasena(
-                    contrasena,
-                    encontrado.getContrasenaHash()
+        boolean contrasenaValida
+                = PasswordUtil.verificarContrasena(
+                        contrasena,
+                        encontrado.getContrasenaHash()
                 );
 
         if (!contrasenaValida) {
@@ -129,7 +128,7 @@ public class UsuarioSistemaService {
 
         if (idEmpleado <= 0) {
             throw new IllegalArgumentException(
-                "El identificador del usuario no es válido."
+                    "El identificador del usuario no es válido."
             );
         }
 
@@ -148,14 +147,41 @@ public class UsuarioSistemaService {
         if (idEmpleado <= 0 || rol == null
                 || usuario == null || usuario.isBlank()) {
             throw new IllegalArgumentException(
-                "Los datos del usuario son inválidos."
+                    "Los datos del usuario son inválidos."
+            );
+        }
+
+        UsuarioSistema usuarioExistente
+                = usuarioDAO.buscarPorId(idEmpleado);
+
+        if (usuarioExistente == null) {
+            throw new IllegalArgumentException(
+                    "El usuario que intenta modificar no existe."
+            );
+        }
+
+        // Impedir que el administrador actual cambie su propio rol.
+        if (SesionUsuario.obtenerIdEmpleado() == idEmpleado
+                && rol != rolUsuario.ADMINISTRADOR) {
+            throw new IllegalArgumentException(
+                    "No puedes cambiar tu propio rol administrativo."
+            );
+        }
+
+        // Impedir que el último administrador activo pierda su rol.
+        if (usuarioExistente.getRol() == rolUsuario.ADMINISTRADOR
+                && usuarioExistente.isActivo()
+                && rol != rolUsuario.ADMINISTRADOR
+                && usuarioDAO.contarAdministradoresActivos() <= 1) {
+            throw new IllegalArgumentException(
+                    "No se puede modificar el rol del último administrador activo."
             );
         }
 
         return usuarioDAO.actualizarDatos(
-            idEmpleado,
-            rol,
-            usuario.trim()
+                idEmpleado,
+                rol,
+                usuario.trim()
         );
     }
 
@@ -169,19 +195,19 @@ public class UsuarioSistemaService {
 
         if (idEmpleado <= 0) {
             throw new IllegalArgumentException(
-                "El identificador del usuario no es válido."
+                    "El identificador del usuario no es válido."
             );
         }
 
         validarContrasena(nuevaContrasena);
 
         String hash = PasswordUtil.generarHash(
-            nuevaContrasena
+                nuevaContrasena
         );
 
         return usuarioDAO.actualizarContrasena(
-            idEmpleado,
-            hash
+                idEmpleado,
+                hash
         );
     }
 
@@ -195,21 +221,40 @@ public class UsuarioSistemaService {
 
         if (idEmpleado <= 0) {
             throw new IllegalArgumentException(
-                "El identificador del usuario no es válido."
+                    "El identificador del usuario no es válido."
             );
         }
 
-        if (SesionUsuario.haySesionActiva()
-                && SesionUsuario.obtenerIdEmpleado() == idEmpleado
+        UsuarioSistema usuarioExistente
+                = usuarioDAO.buscarPorId(idEmpleado);
+
+        if (usuarioExistente == null) {
+            throw new IllegalArgumentException(
+                    "El usuario que intenta modificar no existe."
+            );
+        }
+
+        // No permitir desactivar la propia cuenta.
+        if (SesionUsuario.obtenerIdEmpleado() == idEmpleado
                 && !activo) {
             throw new IllegalArgumentException(
-                "No puedes desactivar tu propia cuenta."
+                    "No puedes desactivar tu propia cuenta."
+            );
+        }
+
+        // Proteger al último administrador activo.
+        if (usuarioExistente.getRol() == rolUsuario.ADMINISTRADOR
+                && usuarioExistente.isActivo()
+                && !activo
+                && usuarioDAO.contarAdministradoresActivos() <= 1) {
+            throw new IllegalArgumentException(
+                    "No se puede desactivar al último administrador activo."
             );
         }
 
         return usuarioDAO.cambiarEstado(
-            idEmpleado,
-            activo
+                idEmpleado,
+                activo
         );
     }
 
@@ -218,7 +263,7 @@ public class UsuarioSistemaService {
 
         if (!SesionUsuario.esAdministrador()) {
             throw new SecurityException(
-                "Esta operación requiere permisos de administrador."
+                    "Esta operación requiere permisos de administrador."
             );
         }
     }
@@ -230,7 +275,7 @@ public class UsuarioSistemaService {
 
         if (usuario == null || usuario.isBlank()) {
             throw new IllegalArgumentException(
-                "El nombre de usuario es obligatorio."
+                    "El nombre de usuario es obligatorio."
             );
         }
 
@@ -242,13 +287,13 @@ public class UsuarioSistemaService {
 
         if (contrasena == null || contrasena.length() < 8) {
             throw new IllegalArgumentException(
-                "La contraseña debe tener al menos 8 caracteres."
+                    "La contraseña debe tener al menos 8 caracteres."
             );
         }
 
         if (contrasena.length() > 128) {
             throw new IllegalArgumentException(
-                "La contraseña no puede superar 128 caracteres."
+                    "La contraseña no puede superar 128 caracteres."
             );
         }
     }
