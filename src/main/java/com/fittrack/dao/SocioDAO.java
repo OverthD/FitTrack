@@ -1,4 +1,3 @@
-
 package com.fittrack.dao;
 
 import com.fittrack.database.Conexion;
@@ -13,12 +12,14 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fittrack.model.SocioActivoReporte;
+
 public class SocioDAO {
 
     // Registrar un socio y devolver su identificador generado.
     public int registrar(String nombre, String apellido,
-                         String correo, String telefono)
-                         throws SQLException, java.io.IOException {
+            String correo, String telefono)
+            throws SQLException, java.io.IOException {
 
         String sql = """
             INSERT INTO socio
@@ -27,9 +28,8 @@ public class SocioDAO {
             VALUES (?, ?, ?, ?, CURDATE(), 'ACTIVO')
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(
-                     sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(
+                sql, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setString(1, nombre);
             ps.setString(2, apellido);
@@ -46,7 +46,7 @@ public class SocioDAO {
         }
 
         throw new SQLException(
-            "No se pudo obtener el identificador del socio."
+                "No se pudo obtener el identificador del socio."
         );
     }
 
@@ -56,8 +56,7 @@ public class SocioDAO {
 
         String sql = "SELECT * FROM socio WHERE idSocio = ?";
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setInt(1, idSocio);
 
@@ -79,9 +78,7 @@ public class SocioDAO {
 
         String sql = "SELECT * FROM socio ORDER BY idSocio";
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
                 socios.add(convertirSocio(rs));
@@ -91,12 +88,97 @@ public class SocioDAO {
         return socios;
     }
 
+    // Consultar únicamente los socios que se encuentran activos.
+    public List<Socio> listarSociosActivos()
+            throws SQLException, java.io.IOException {
+
+        List<Socio> socios = new ArrayList<>();
+
+        String sql = """
+        SELECT *
+        FROM socio
+        WHERE estado = 'ACTIVO'
+        ORDER BY idSocio
+        """;
+
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                socios.add(convertirSocio(rs));
+            }
+        }
+
+        return socios;
+    }
+
+    // Consultar socios activos que tengan una membresía vigente o en tolerancia.
+    public List<SocioActivoReporte> listarSociosActivosConMembresia()
+            throws SQLException, java.io.IOException {
+
+        List<SocioActivoReporte> reporte = new ArrayList<>();
+
+        String sql = """
+        SELECT
+            s.idSocio,
+            s.nombre,
+            s.apellido,
+            s.telefono,
+            s.correo,
+            m.tipo,
+            m.fechaVencimiento
+        FROM socio s
+        INNER JOIN sociomembresia sm
+            ON s.idSocio = sm.idSocio
+        INNER JOIN membresia m
+            ON sm.idMembresia = m.idMembresia
+        WHERE s.estado = 'ACTIVO'
+          AND (
+                CURDATE() BETWEEN m.fechaInicio AND m.fechaVencimiento
+                OR (
+                    m.tipo = 'MENSUAL'
+                    AND CURDATE() > m.fechaVencimiento
+                    AND CURDATE() <= DATE_ADD(
+                        m.fechaVencimiento, INTERVAL 3 DAY
+                    )
+                )
+          )
+        ORDER BY s.idSocio, m.fechaVencimiento
+        """;
+
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+
+                java.sql.Date fechaSQL = rs.getDate("fechaVencimiento");
+
+                java.time.LocalDate fechaVencimiento
+                        = fechaSQL != null
+                                ? fechaSQL.toLocalDate()
+                                : null;
+
+                SocioActivoReporte socio = new SocioActivoReporte(
+                        rs.getInt("idSocio"),
+                        rs.getString("nombre"),
+                        rs.getString("apellido"),
+                        rs.getString("telefono"),
+                        rs.getString("correo"),
+                        rs.getString("tipo"),
+                        fechaVencimiento
+                );
+
+                reporte.add(socio);
+            }
+        }
+
+        return reporte;
+    }
+
     // Actualizar los datos personales permitidos.
     public boolean actualizarDatos(int idSocio,
-                                   String nombre,
-                                   String apellido,
-                                   String correo,
-                                   String telefono)
+            String nombre,
+            String apellido,
+            String correo,
+            String telefono)
             throws SQLException, java.io.IOException {
 
         String sql = """
@@ -108,8 +190,7 @@ public class SocioDAO {
             WHERE idSocio = ?
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setString(1, nombre);
             ps.setString(2, apellido);
@@ -131,8 +212,7 @@ public class SocioDAO {
             WHERE idSocio = ?
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setString(1, estado.name());
             ps.setInt(2, idSocio);
@@ -147,21 +227,21 @@ public class SocioDAO {
 
         java.sql.Date fechaSQL = rs.getDate("fechaRegistro");
 
-        java.time.LocalDate fechaRegistro =
-                fechaSQL != null ? fechaSQL.toLocalDate() : null;
+        java.time.LocalDate fechaRegistro
+                = fechaSQL != null ? fechaSQL.toLocalDate() : null;
 
         estadoSocio estado = estadoSocio.valueOf(
                 rs.getString("estado")
         );
 
         return new Socio(
-            rs.getInt("idSocio"),
-            rs.getString("nombre"),
-            rs.getString("apellido"),
-            rs.getString("correo"),
-            rs.getString("telefono"),
-            fechaRegistro,
-            estado
+                rs.getInt("idSocio"),
+                rs.getString("nombre"),
+                rs.getString("apellido"),
+                rs.getString("correo"),
+                rs.getString("telefono"),
+                fechaRegistro,
+                estado
         );
     }
 }

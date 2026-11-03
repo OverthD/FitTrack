@@ -3,10 +3,14 @@ package com.fittrack.service;
 import com.fittrack.dao.SocioDAO;
 import com.fittrack.model.Socio;
 import com.fittrack.model.estadoSocio;
+import com.fittrack.util.SesionUsuario;
+import com.fittrack.model.rolUsuario;
 
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+
+import com.fittrack.model.SocioActivoReporte;
 
 public class SocioService {
 
@@ -49,6 +53,13 @@ public class SocioService {
             throws SQLException, IOException {
 
         return socioDAO.listarTodos();
+    }
+
+    // Consultar únicamente los socios activos.
+    public List<Socio> listarSociosActivos()
+            throws SQLException, IOException {
+
+        return socioDAO.listarSociosActivos();
     }
 
     // Actualizar datos personales.
@@ -114,7 +125,7 @@ public class SocioService {
         }
     }
 
-    public boolean cambiarEstadoSocio(int idSocio, estadoSocio nuevoEstado)
+    /*public boolean cambiarEstadoSocio(int idSocio, estadoSocio nuevoEstado)
             throws SQLException, IOException {
 
         if (idSocio <= 0) {
@@ -126,5 +137,64 @@ public class SocioService {
         }
 
         return socioDAO.cambiarEstado(idSocio, nuevoEstado);
+    }*/
+    // Cambiar el estado de un socio (RF-23).
+    public boolean cambiarEstadoSocio(int idSocio, estadoSocio nuevoEstado)
+            throws SQLException, IOException {
+
+        // Verificar que exista una sesión activa.
+        if (!SesionUsuario.haySesionActiva()) {
+            throw new IllegalStateException(
+                    "Debe iniciar sesión para cambiar el estado de un socio."
+            );
+        }
+
+        // Verificar permisos de empleado o administrador.
+        rolUsuario rol = SesionUsuario.obtenerUsuarioActual().getRol();
+
+        if (rol != rolUsuario.EMPLEADO
+                && rol != rolUsuario.ADMINISTRADOR) {
+
+            throw new SecurityException(
+                    "No tiene permisos para cambiar el estado de un socio."
+            );
+        }
+
+        if (idSocio <= 0) {
+            throw new IllegalArgumentException(
+                    "El identificador debe ser válido."
+            );
+        }
+
+        if (nuevoEstado == null) {
+            throw new IllegalArgumentException(
+                    "Debe seleccionar un estado."
+            );
+        }
+
+        return socioDAO.cambiarEstado(idSocio, nuevoEstado);
+    }
+
+    // Generar el reporte de socios activos con membresía vigente o en tolerancia.
+    public List<SocioActivoReporte> generarReporteSociosActivos()
+            throws SQLException, IOException {
+
+        return socioDAO.listarSociosActivosConMembresia();
+    }
+
+    // Identificar un socio mediante su identificador único (RF-22).
+    public boolean identificarSocio(int idSocio)
+            throws SQLException, IOException {
+
+        // Verificar que exista una sesión activa.
+        SesionUsuario.obtenerIdEmpleado();
+
+        if (idSocio <= 0) {
+            throw new IllegalArgumentException(
+                    "El identificador debe ser válido."
+            );
+        }
+
+        return socioDAO.buscarPorId(idSocio) != null;
     }
 }

@@ -1,4 +1,3 @@
-
 package com.fittrack.dao;
 
 import com.fittrack.database.Conexion;
@@ -28,9 +27,8 @@ public class UsuarioSistemaDAO {
             VALUES (?, ?, ?, ?)
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(
-                     sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(
+                sql, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setString(1, usuario.getRol().name());
             ps.setString(2, usuario.getUsuario());
@@ -49,7 +47,7 @@ public class UsuarioSistemaDAO {
         }
 
         throw new SQLException(
-            "No se pudo obtener el identificador del usuario."
+                "No se pudo obtener el identificador del usuario."
         );
     }
 
@@ -63,8 +61,7 @@ public class UsuarioSistemaDAO {
             WHERE idEmpleado = ?
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setInt(1, idEmpleado);
 
@@ -88,8 +85,7 @@ public class UsuarioSistemaDAO {
             WHERE usuario = ?
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setString(1, usuario);
 
@@ -115,9 +111,7 @@ public class UsuarioSistemaDAO {
             ORDER BY idEmpleado
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
                 usuarios.add(convertirUsuario(rs));
@@ -129,8 +123,8 @@ public class UsuarioSistemaDAO {
 
     // Actualizar rol y nombre de usuario.
     public boolean actualizarDatos(int idEmpleado,
-                                   rolUsuario rol,
-                                   String usuario)
+            rolUsuario rol,
+            String usuario)
             throws SQLException, IOException {
 
         String sql = """
@@ -140,8 +134,7 @@ public class UsuarioSistemaDAO {
             WHERE idEmpleado = ?
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setString(1, rol.name());
             ps.setString(2, usuario);
@@ -153,7 +146,7 @@ public class UsuarioSistemaDAO {
 
     // Actualizar el hash de la contraseña.
     public boolean actualizarContrasena(int idEmpleado,
-                                        String contrasenaHash)
+            String contrasenaHash)
             throws SQLException, IOException {
 
         String sql = """
@@ -162,8 +155,7 @@ public class UsuarioSistemaDAO {
             WHERE idEmpleado = ?
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setString(1, contrasenaHash);
             ps.setInt(2, idEmpleado);
@@ -182,8 +174,7 @@ public class UsuarioSistemaDAO {
             WHERE idEmpleado = ?
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setBoolean(1, activo);
             ps.setInt(2, idEmpleado);
@@ -199,7 +190,7 @@ public class UsuarioSistemaDAO {
         int idEmpleado = rs.getInt("idEmpleado");
 
         rolUsuario rol = rolUsuario.valueOf(
-            rs.getString("rol")
+                rs.getString("rol")
         );
 
         String usuario = rs.getString("usuario");
@@ -212,24 +203,45 @@ public class UsuarioSistemaDAO {
 
             case ADMINISTRADOR:
                 return new Administrador(
-                    idEmpleado,
-                    usuario,
-                    contrasenaHash,
-                    activo
+                        idEmpleado,
+                        usuario,
+                        contrasenaHash,
+                        activo
                 );
 
             case EMPLEADO:
                 return new Empleado(
-                    idEmpleado,
-                    usuario,
-                    contrasenaHash,
-                    activo
+                        idEmpleado,
+                        usuario,
+                        contrasenaHash,
+                        activo
                 );
 
             default:
                 throw new SQLException(
-                    "El rol del usuario no es válido."
+                        "El rol del usuario no es válido."
                 );
         }
+    }
+
+    // Contar administradores que tienen su cuenta activa.
+    public int contarAdministradoresActivos()
+            throws SQLException, IOException {
+
+        String sql = """
+        SELECT COUNT(*)
+        FROM usuariosistema
+        WHERE rol = 'ADMINISTRADOR'
+          AND activo = TRUE
+        """;
+
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+
+        return 0;
     }
 }
