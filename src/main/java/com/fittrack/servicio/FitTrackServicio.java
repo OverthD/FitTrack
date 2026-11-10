@@ -11,6 +11,7 @@ import com.fittrack.model.rolUsuario;
 import com.fittrack.model.tipoMembresia;
 import java.time.LocalDate;
 import java.util.List;
+import com.fittrack.servicio.RespaldoResumen;
 
 /**
  * PUNTO DE CONEXIÓN ENTRE LAS PANTALLAS Y LA LÓGICA.
@@ -127,4 +128,9 @@ public interface FitTrackServicio {
      * Devuelve el nombre del archivo de respaldo generado.
      */
     String generarRespaldo(String carpeta) throws Exception;
+
+    /**
+     * Consulta el historial de respaldos registrados.
+     */
+    List<RespaldoResumen> listarRespaldos() throws Exception;
 }

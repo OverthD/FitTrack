@@ -4,6 +4,7 @@ import com.fittrack.model.Membresia;
 import com.fittrack.model.Socio;
 import com.fittrack.model.UsuarioSistema;
 import com.fittrack.model.estadoSocio;
+import com.fittrack.servicio.RespaldoResumen;
 import com.fittrack.model.rolUsuario;
 
 import com.fittrack.service.MembresiaService;
@@ -28,9 +29,8 @@ import com.fittrack.servicio.ResumenVentas;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-
+import com.fittrack.service.RespaldoService;
 import com.fittrack.service.AcreditacionEstudianteService;
-
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -53,6 +53,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 public class ServicioMySQL implements FitTrackServicio {
 
     private final UsuarioSistemaService usuarioService;
@@ -63,6 +66,7 @@ public class ServicioMySQL implements FitTrackServicio {
     private final PagoService pagoService;
     private final AccesoDAO accesoDAO;
     private final AccesoService accesoService;
+    private final RespaldoService respaldoService;
 
     public ServicioMySQL() {
         this.usuarioService = new UsuarioSistemaService();
@@ -73,6 +77,7 @@ public class ServicioMySQL implements FitTrackServicio {
         this.pagoService = new PagoService();
         this.accesoDAO = new AccesoDAO();
         this.accesoService = new AccesoService();
+        this.respaldoService = new RespaldoService();
     }
 
     // --------------------------------------------------
@@ -1139,6 +1144,17 @@ public class ServicioMySQL implements FitTrackServicio {
 
     @Override
     public String generarRespaldo(String carpeta) throws Exception {
-        throw pendiente("generarRespaldo");
+
+        Path directorio = Paths.get(carpeta);
+
+        Path archivoGenerado
+                = respaldoService.generarRespaldo(directorio);
+
+        return archivoGenerado.getFileName().toString();
+    }
+
+    @Override
+    public List<RespaldoResumen> listarRespaldos() throws Exception {
+        return respaldoService.listarRespaldos();
     }
 }
