@@ -172,4 +172,11 @@ public class PagoService {
         );
     }
 
+    // Consultar todos los pagos registrados en el sistema.
+    public List<Pago> consultarTodosPagos()
+            throws SQLException, IOException {
+
+        return pagoDAO.listarTodos();
+    }
+
 }

@@ -501,4 +501,28 @@ public class PagoDAO {
         }
     }
 
+    // Lista todos los pagos registrados en el sistema.
+    public List<Pago> listarTodos()
+            throws SQLException, IOException {
+
+        List<Pago> pagos = new ArrayList<>();
+
+        String sql = """
+        SELECT idPago, idMembresia, idEmpleado,
+               fechaPago, monto, metodoPago
+        FROM pago
+        WHERE monto IS NOT NULL
+        ORDER BY fechaPago DESC, idPago DESC
+        """;
+
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                pagos.add(mapearPago(rs));
+            }
+        }
+
+        return pagos;
+    }
+
 }

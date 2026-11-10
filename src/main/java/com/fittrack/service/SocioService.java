@@ -21,9 +21,39 @@ public class SocioService {
     }
 
     // Registrar socio con validaciones.
+    /*public int registrarSocio(String nombre, String apellido,
+            String correo, String telefono)
+            throws SQLException, IOException {
+
+        validarDatos(nombre, apellido, correo, telefono);
+
+        return socioDAO.registrar(
+                nombre.trim(),
+                apellido.trim(),
+                correo.trim(),
+                telefono.trim()
+        );
+    }*/
+    // Registrar socio con validaciones y permisos.
     public int registrarSocio(String nombre, String apellido,
             String correo, String telefono)
             throws SQLException, IOException {
+
+        // Verificar que exista una sesión activa.
+        if (!SesionUsuario.haySesionActiva()) {
+            throw new IllegalStateException(
+                    "Debe iniciar sesión para registrar un socio."
+            );
+        }
+
+        // Verificar que el usuario sea empleado.
+        rolUsuario rol = SesionUsuario.obtenerUsuarioActual().getRol();
+
+        if (rol != rolUsuario.EMPLEADO) {
+            throw new SecurityException(
+                    "Solo un empleado puede registrar socios."
+            );
+        }
 
         validarDatos(nombre, apellido, correo, telefono);
 

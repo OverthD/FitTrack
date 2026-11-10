@@ -1,5 +1,6 @@
 package com.fittrack.dao;
 
+import com.fittrack.database.Conexion;
 import com.fittrack.model.Acceso;
 import com.fittrack.model.AccesoReporte;
 import java.io.IOException;
@@ -131,6 +132,28 @@ public class AccesoDAO {
                 while (resultado.next()) {
                     accesos.add(mapearAcceso(resultado));
                 }
+            }
+        }
+
+        return accesos;
+    }
+
+    // Listar todos los accesos del sistema.
+    public List<Acceso> listarTodos()
+            throws SQLException, IOException {
+
+        String sql = """
+        SELECT *
+        FROM acceso
+        ORDER BY fecha DESC, horaEntrada DESC
+        """;
+
+        List<Acceso> accesos = new ArrayList<>();
+
+        try (Connection conexion = Conexion.conectar(); PreparedStatement sentencia = conexion.prepareStatement(sql); ResultSet resultado = sentencia.executeQuery()) {
+
+            while (resultado.next()) {
+                accesos.add(mapearAcceso(resultado));
             }
         }
 
