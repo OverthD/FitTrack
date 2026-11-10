@@ -10,8 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
-import javafx.print.PageLayout;
-import javafx.print.PrinterJob;
+
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -22,9 +21,20 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.transform.Scale;
 
-/** Pantalla 13: Reportes (tema claro, solo administrador). */
+import com.fittrack.service.ReportePDFService;
+import com.lowagie.text.DocumentException;
+import java.io.File;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import javafx.scene.control.Alert;
+import javafx.stage.FileChooser;
+
+import java.awt.Desktop;
+
+/**
+ * Pantalla 13: Reportes (tema claro, solo administrador).
+ */
 public class ReportesView {
 
     private final FitTrackServicio servicio;
@@ -36,6 +46,7 @@ public class ReportesView {
     private final ComboBox<String> cmbFiltro = new ComboBox<>();
     private final TableView<List<String>> tabla = Ui.tabla("Elige un reporte y presiona \"Generar reporte\".");
     private VBox raiz;
+    private TablaReporte reporteActual;
 
     public ReportesView(FitTrackServicio servicio) {
         this.servicio = servicio;
@@ -67,14 +78,14 @@ public class ReportesView {
 
         Button btnGenerar = Ui.boton("Generar reporte", "boton-marino");
         btnGenerar.setOnAction(e -> generar());
-        Button btnImprimir = Ui.boton("Imprimir", "boton-secundario");
-        btnImprimir.setOnAction(e -> imprimir());
+        Button btnExportar = Ui.boton("Exportar PDF", "boton-secundario");
+        btnExportar.setOnAction(e -> exportarPDF());
 
         VBox colFiltro = new VBox(4, lblFiltro, cmbFiltro);
         HBox filtros = new HBox(12,
-            new VBox(4, Ui.etiqueta("Desde", "etiqueta-campo"), dpDesde),
-            new VBox(4, Ui.etiqueta("Hasta", "etiqueta-campo"), dpHasta),
-            colFiltro, Ui.espacio(), btnGenerar, btnImprimir);
+                new VBox(4, Ui.etiqueta("Desde", "etiqueta-campo"), dpDesde),
+                new VBox(4, Ui.etiqueta("Hasta", "etiqueta-campo"), dpHasta),
+                colFiltro, Ui.espacio(), btnGenerar, btnExportar);
         filtros.setAlignment(Pos.BOTTOM_LEFT);
         VBox panelFiltros = Ui.panel(0, filtros);
 
@@ -113,7 +124,8 @@ public class ReportesView {
                 lblFiltro.setText("Método de pago");
                 opciones.addAll(MetodoPago.TODOS);
             }
-            default -> usaFiltro = false;
+            default ->
+                usaFiltro = false;
         }
         cmbFiltro.getItems().setAll(opciones);
         cmbFiltro.setValue("Todos");
@@ -129,48 +141,132 @@ public class ReportesView {
         if (tipoActual() != TipoReporte.SOCIOS_ACTIVOS) {
             if (desde == null || hasta == null || hasta.isBefore(desde)) {
                 DialogoFitTrack.advertencia(Ui.ventana(raiz), "Periodo no válido",
-                    "Elige las dos fechas y que la final no sea anterior a la inicial.");
+                        "Elige las dos fechas y que la final no sea anterior a la inicial.");
                 return;
             }
         }
-        TablaReporte reporte = servicio.reporte(tipoActual(), desde, hasta, cmbFiltro.getValue());
+        reporteActual = servicio.reporte(
+                tipoActual(), desde, hasta, cmbFiltro.getValue());
+
+        TablaReporte reporte = reporteActual;
 
         tabla.getColumns().clear();
+
         for (int i = 0; i < reporte.columnas().size(); i++) {
+
             final int indice = i;
-            tabla.getColumns().add(Ui.<List<String>>columna(reporte.columnas().get(i), fila -> fila.get(indice)));
+            String nombreColumna = reporte.columnas().get(i);
+
+            var columna = Ui.<List<String>>columna(
+                    nombreColumna,
+                    fila -> fila.get(indice));
+
+            columna.setMinWidth(90);
+            columna.setPrefWidth(130);
+            columna.setMaxWidth(300);
+
+            tabla.getColumns().add(columna);
         }
+
+// Permitir desplazamiento horizontal cuando sea necesario.
+        tabla.setColumnResizePolicy(
+                TableView.UNCONSTRAINED_RESIZE_POLICY);
         tabla.setPlaceholder(new Label("No hay datos para este reporte."));
         tabla.setItems(FXCollections.observableArrayList(reporte.filas()));
     }
 
-    private void imprimir() {
-        if (tabla.getItems().isEmpty()) {
-            DialogoFitTrack.advertencia(Ui.ventana(raiz), "Nada que imprimir", "Genera un reporte con datos antes de imprimir.");
+    private void exportarPDF() {
+
+        if (reporteActual == null) {
+            DialogoFitTrack.advertencia(
+                    Ui.ventana(raiz),
+                    "Reporte no disponible",
+                    "Primero genera un reporte.");
             return;
         }
-        PrinterJob trabajo = PrinterJob.createPrinterJob();
-        if (trabajo == null) {
-            DialogoFitTrack.error(Ui.ventana(raiz), "Sin impresora", "No se encontró una impresora disponible en este equipo.");
+
+        FileChooser selector = new FileChooser();
+        selector.setTitle("Guardar reporte PDF");
+
+        selector.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter(
+                        "Documento PDF", "*.pdf"));
+
+        String fechaHora = LocalDateTime.now().format(
+                DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+
+        selector.setInitialFileName(
+                "FitTrack_Reporte_" + tipoActual().name()
+                + "_" + fechaHora + ".pdf");
+
+        File archivo = selector.showSaveDialog(Ui.ventana(raiz));
+
+        if (archivo == null) {
             return;
         }
-        if (!trabajo.showPrintDialog(Ui.ventana(raiz))) {
-            return;
+
+        if (!archivo.getName().toLowerCase().endsWith(".pdf")) {
+            archivo = new File(archivo.getAbsolutePath() + ".pdf");
         }
-        PageLayout pagina = trabajo.getJobSettings().getPageLayout();
-        double ancho = tabla.getBoundsInParent().getWidth();
-        Scale escala = new Scale(1, 1);
-        if (ancho > pagina.getPrintableWidth()) {
-            double f = pagina.getPrintableWidth() / ancho;
-            escala = new Scale(f, f);
-        }
-        tabla.getTransforms().add(escala);
-        boolean ok = trabajo.printPage(tabla);
-        tabla.getTransforms().remove(escala);
-        if (ok) {
-            trabajo.endJob();
-        } else {
-            DialogoFitTrack.error(Ui.ventana(raiz), "No se pudo imprimir", "Revisa la impresora e inténtalo de nuevo.");
+
+        try {
+            // Primero generar y guardar el documento.
+            ReportePDFService generador = new ReportePDFService();
+
+            generador.generar(
+                    archivo.toPath(),
+                    tipoActual(),
+                    dpDesde.getValue(),
+                    dpHasta.getValue(),
+                    cmbFiltro.isDisabled()
+                    ? "Sin filtro"
+                    : cmbFiltro.getValue(),
+                    reporteActual
+            );
+
+            // Comprobar que el archivo realmente exista.
+            if (!archivo.exists()) {
+                throw new java.io.IOException(
+                        "El PDF no se encontró después de generarlo.");
+            }
+
+            // Después abrirlo con el visor predeterminado.
+            if (Desktop.isDesktopSupported()
+                    && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+
+                Desktop.getDesktop().open(archivo);
+
+                DialogoFitTrack.advertencia(
+                        Ui.ventana(raiz),
+                        "Exportación completada",
+                        "El reporte se generó y se abrió correctamente.");
+
+            } else {
+                DialogoFitTrack.advertencia(
+                        Ui.ventana(raiz),
+                        "PDF generado",
+                        "El archivo se guardó correctamente, pero este equipo "
+                        + "no permite abrirlo automáticamente:\n"
+                        + archivo.getAbsolutePath());
+            }
+
+        } catch (java.io.IOException ex) {
+            DialogoFitTrack.error(
+                    Ui.ventana(raiz),
+                    "Error al exportar",
+                    "No fue posible guardar o abrir el PDF:\n"
+                    + ex.getMessage());
+
+            ex.printStackTrace();
+
+        } catch (Exception ex) {
+            DialogoFitTrack.error(
+                    Ui.ventana(raiz),
+                    "Error al generar PDF",
+                    ex.getMessage());
+
+            ex.printStackTrace();
         }
     }
+
 }
