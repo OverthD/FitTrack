@@ -73,6 +73,57 @@ public class UsuarioSistemaService {
         return usuarioDAO.registrar(empleado);
     }
 
+    // Registrar un usuario según el rol seleccionado.
+// Requiere un administrador autenticado.
+    public int registrarUsuario(
+            rolUsuario rol,
+            String usuario,
+            String contrasena)
+            throws SQLException, IOException {
+
+        exigirAdministrador();
+
+        if (rol == null) {
+            throw new IllegalArgumentException(
+                    "Debes seleccionar un rol para el usuario."
+            );
+        }
+
+        validarCredenciales(usuario, contrasena);
+
+        String nombreUsuario = usuario.trim();
+        String hash = PasswordUtil.generarHash(contrasena);
+
+        UsuarioSistema nuevoUsuario;
+
+        switch (rol) {
+            case ADMINISTRADOR:
+                nuevoUsuario = new Administrador(
+                        0,
+                        nombreUsuario,
+                        hash,
+                        true
+                );
+                break;
+
+            case EMPLEADO:
+                nuevoUsuario = new Empleado(
+                        0,
+                        nombreUsuario,
+                        hash,
+                        true
+                );
+                break;
+
+            default:
+                throw new IllegalArgumentException(
+                        "El rol seleccionado no es válido."
+                );
+        }
+
+        return usuarioDAO.registrar(nuevoUsuario);
+    }
+
     // Iniciar sesión.
     public UsuarioSistema iniciarSesion(
             String usuario,

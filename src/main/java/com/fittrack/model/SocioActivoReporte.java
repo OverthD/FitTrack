@@ -11,10 +11,17 @@ public class SocioActivoReporte {
     private String correo;
     private String tipoMembresia;
     private LocalDate fechaVencimiento;
+    private estadoMembresia estadoMembresia;
 
-    public SocioActivoReporte(int idSocio, String nombre,
-            String apellido, String telefono, String correo,
-            String tipoMembresia, LocalDate fechaVencimiento) {
+    public SocioActivoReporte(
+            int idSocio,
+            String nombre,
+            String apellido,
+            String telefono,
+            String correo,
+            String tipoMembresia,
+            LocalDate fechaVencimiento,
+            estadoMembresia estadoMembresia) {
 
         this.idSocio = idSocio;
         this.nombre = nombre;
@@ -23,6 +30,7 @@ public class SocioActivoReporte {
         this.correo = correo;
         this.tipoMembresia = tipoMembresia;
         this.fechaVencimiento = fechaVencimiento;
+        this.estadoMembresia = estadoMembresia;
     }
 
     public int getIdSocio() {
@@ -51,5 +59,9 @@ public class SocioActivoReporte {
 
     public LocalDate getFechaVencimiento() {
         return fechaVencimiento;
+    }
+
+    public estadoMembresia getEstadoMembresia() {
+        return estadoMembresia;
     }
 }

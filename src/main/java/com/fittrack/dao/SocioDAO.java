@@ -12,6 +12,10 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fittrack.model.Membresia;
+import com.fittrack.model.tipoMembresia;
+import com.fittrack.model.estadoMembresia;
+
 import com.fittrack.model.SocioActivoReporte;
 
 public class SocioDAO {
@@ -112,6 +116,7 @@ public class SocioDAO {
     }
 
     // Consultar socios activos que tengan una membresía vigente o en tolerancia.
+    // Consultar socios activos con su membresía más reciente.
     public List<SocioActivoReporte> listarSociosActivosConMembresia()
             throws SQLException, java.io.IOException {
 
@@ -124,49 +129,77 @@ public class SocioDAO {
             s.apellido,
             s.telefono,
             s.correo,
+            m.idMembresia,
             m.tipo,
-            m.fechaVencimiento
+            m.fechaInicio,
+            m.fechaVencimiento,
+            m.precio,
+            m.estado
         FROM socio s
         INNER JOIN sociomembresia sm
             ON s.idSocio = sm.idSocio
         INNER JOIN membresia m
             ON sm.idMembresia = m.idMembresia
         WHERE s.estado = 'ACTIVO'
-          AND (
-                CURDATE() BETWEEN m.fechaInicio AND m.fechaVencimiento
-                OR (
-                    m.tipo = 'MENSUAL'
-                    AND CURDATE() > m.fechaVencimiento
-                    AND CURDATE() <= DATE_ADD(
-                        m.fechaVencimiento, INTERVAL 3 DAY
-                    )
-                )
+          AND m.idMembresia = (
+                SELECT sm2.idMembresia
+                FROM sociomembresia sm2
+                INNER JOIN membresia m2
+                    ON sm2.idMembresia = m2.idMembresia
+                WHERE sm2.idSocio = s.idSocio
+                ORDER BY
+                    m2.fechaInicio DESC,
+                    m2.idMembresia DESC
+                LIMIT 1
           )
-        ORDER BY s.idSocio, m.fechaVencimiento
+        ORDER BY s.idSocio
         """;
 
         try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
 
-                java.sql.Date fechaSQL = rs.getDate("fechaVencimiento");
+                java.sql.Date inicioSQL = rs.getDate("fechaInicio");
+                java.sql.Date vencimientoSQL = rs.getDate("fechaVencimiento");
 
-                java.time.LocalDate fechaVencimiento
-                        = fechaSQL != null
-                                ? fechaSQL.toLocalDate()
-                                : null;
+                java.time.LocalDate fechaInicio = inicioSQL != null
+                        ? inicioSQL.toLocalDate()
+                        : null;
 
-                SocioActivoReporte socio = new SocioActivoReporte(
+                java.time.LocalDate fechaVencimiento = vencimientoSQL != null
+                        ? vencimientoSQL.toLocalDate()
+                        : null;
+
+                tipoMembresia tipo = tipoMembresia.valueOf(
+                        rs.getString("tipo")
+                );
+
+                estadoMembresia estadoPersistido = estadoMembresia.valueOf(
+                        rs.getString("estado")
+                );
+
+                Membresia membresia = new Membresia(
+                        rs.getInt("idMembresia"),
+                        tipo,
+                        fechaInicio,
+                        fechaVencimiento,
+                        rs.getBigDecimal("precio"),
+                        estadoPersistido
+                );
+
+                estadoMembresia estadoActual
+                        = membresia.calcularEstado(java.time.LocalDate.now());
+
+                reporte.add(new SocioActivoReporte(
                         rs.getInt("idSocio"),
                         rs.getString("nombre"),
                         rs.getString("apellido"),
                         rs.getString("telefono"),
                         rs.getString("correo"),
-                        rs.getString("tipo"),
-                        fechaVencimiento
-                );
-
-                reporte.add(socio);
+                        tipo.name(),
+                        fechaVencimiento,
+                        estadoActual
+                ));
             }
         }
 

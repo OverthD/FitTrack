@@ -12,6 +12,7 @@ import com.fittrack.model.tipoMembresia;
 import com.fittrack.model.estadoMembresia;
 import com.fittrack.model.estadoSocio;
 import com.fittrack.model.MembresiaReporte;
+import com.fittrack.model.rolUsuario;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -372,6 +373,97 @@ public class MembresiaService {
         return membresia;
     }
 
+    // Consultar la membresía más reciente de un socio.
+// Si es compartida, devolver los datos de ambos socios.
+    public List<MembresiaReporte> consultarMembresiaMasReciente(
+            int idSocio)
+            throws SQLException, IOException {
+
+        // Verificar que exista una sesión de empleado.
+        if (!SesionUsuario.haySesionActiva()
+                || SesionUsuario.obtenerUsuarioActual().getRol()
+                != rolUsuario.EMPLEADO) {
+
+            throw new SecurityException(
+                    "Solo un empleado puede consultar el estado "
+                    + "de las membresías."
+            );
+        }
+
+        if (idSocio <= 0) {
+            throw new IllegalArgumentException(
+                    "El identificador del socio debe ser válido."
+            );
+        }
+
+        // Comprobar que el socio exista.
+        Socio socio = socioDAO.buscarPorId(idSocio);
+
+        if (socio == null) {
+            throw new IllegalArgumentException(
+                    "No existe un socio con el identificador "
+                    + idSocio + "."
+            );
+        }
+
+        // Recuperar la membresía más reciente y sus socios asociados.
+        List<MembresiaReporte> resultado
+                = membresiaDAO.consultarMasRecientePorSocio(idSocio);
+
+        if (resultado.isEmpty()) {
+            return resultado;
+        }
+
+        // Calcular el estado actual de la membresía.
+        MembresiaReporte primerRegistro = resultado.get(0);
+
+        Membresia membresia = new Membresia(
+                primerRegistro.getIdMembresia(),
+                primerRegistro.getTipo(),
+                primerRegistro.getFechaInicio(),
+                primerRegistro.getFechaVencimiento(),
+                primerRegistro.getPrecio(),
+                primerRegistro.getEstado()
+        );
+
+        estadoMembresia estadoActual = membresia.calcularEstado();
+
+        // Sincronizar el estado almacenado en la base de datos.
+        if (estadoActual != membresia.getEstado()) {
+
+            boolean actualizado = membresiaDAO.actualizarEstado(
+                    membresia.getIdMembresia(),
+                    estadoActual
+            );
+
+            if (!actualizado) {
+                throw new SQLException(
+                        "No se pudo actualizar el estado de la membresía."
+                );
+            }
+        }
+
+        // Devolver los registros con el estado actualizado.
+        List<MembresiaReporte> resultadoActualizado = new ArrayList<>();
+
+        for (MembresiaReporte registro : resultado) {
+
+            resultadoActualizado.add(new MembresiaReporte(
+                    registro.getIdSocio(),
+                    registro.getNombre(),
+                    registro.getApellido(),
+                    registro.getIdMembresia(),
+                    registro.getTipo(),
+                    registro.getFechaInicio(),
+                    registro.getFechaVencimiento(),
+                    registro.getPrecio(),
+                    estadoActual
+            ));
+        }
+
+        return resultadoActualizado;
+    }
+
     // Listar todas las membresías y sincronizar sus estados.
     public List<Membresia> listarMembresias()
             throws SQLException, IOException {
@@ -453,6 +545,32 @@ public class MembresiaService {
         }
 
         return membresias;
+    }
+
+    // Generar reporte de membresías por periodo y estado.
+// Solamente el administrador puede consultar este reporte.
+    public List<MembresiaReporte> generarReporteMembresias(
+            LocalDate desde,
+            LocalDate hasta,
+            estadoMembresia estadoFiltro)
+            throws SQLException, IOException {
+
+        // Verificar que exista una sesión administrativa.
+        if (!SesionUsuario.haySesionActiva()
+                || !SesionUsuario.esAdministrador()) {
+
+            throw new SecurityException(
+                    "No tiene permisos para generar el reporte "
+                    + "de membresías. Se requiere un administrador."
+            );
+        }
+
+        // Consultar los datos aplicando los filtros.
+        return membresiaDAO.listarDatosReporte(
+                desde,
+                hasta,
+                estadoFiltro
+        );
     }
 
     // Actualizar el estado almacenado si cambió el estado calculado.

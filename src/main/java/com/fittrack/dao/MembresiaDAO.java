@@ -1,4 +1,3 @@
-
 package com.fittrack.dao;
 
 import com.fittrack.database.Conexion;
@@ -69,8 +68,7 @@ public class MembresiaDAO {
             WHERE idMembresia = ?
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setInt(1, idMembresia);
 
@@ -94,9 +92,7 @@ public class MembresiaDAO {
             ORDER BY idMembresia
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
                 membresias.add(convertirMembresia(rs));
@@ -125,8 +121,7 @@ public class MembresiaDAO {
 
         LocalDate fechaLimite = fechaConsulta.plusDays(dias);
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setDate(1, Date.valueOf(fechaConsulta));
             ps.setDate(2, Date.valueOf(fechaConsulta));
@@ -153,8 +148,7 @@ public class MembresiaDAO {
             WHERE idMembresia = ?
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setString(1, estado.name());
             ps.setInt(2, idMembresia);
@@ -191,8 +185,7 @@ public class MembresiaDAO {
         ORDER BY idSocio
         """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
 
             ps.setInt(1, idMembresia);
 
@@ -204,6 +197,76 @@ public class MembresiaDAO {
         }
 
         return idsSocios;
+    }
+
+    // Consultar la membresía más reciente de un socio,
+// incluyendo todos los socios asociados a esa membresía.
+    public List<MembresiaReporte> consultarMasRecientePorSocio(int idSocio)
+            throws SQLException, IOException {
+
+        List<MembresiaReporte> resultado = new ArrayList<>();
+
+        String sql = """
+        SELECT
+            s.idSocio,
+            s.nombre,
+            s.apellido,
+            m.idMembresia,
+            m.tipo,
+            m.fechaInicio,
+            m.fechaVencimiento,
+            m.precio,
+            m.estado
+        FROM membresia m
+        INNER JOIN sociomembresia sm
+            ON m.idMembresia = sm.idMembresia
+        INNER JOIN socio s
+            ON sm.idSocio = s.idSocio
+        WHERE m.idMembresia = (
+            SELECT sm2.idMembresia
+            FROM sociomembresia sm2
+            INNER JOIN membresia m2
+                ON sm2.idMembresia = m2.idMembresia
+            WHERE sm2.idSocio = ?
+            ORDER BY m2.fechaInicio DESC, m2.idMembresia DESC
+            LIMIT 1
+        )
+        ORDER BY s.idSocio
+        """;
+
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
+
+            ps.setInt(1, idSocio);
+
+            try (ResultSet rs = ps.executeQuery()) {
+
+                while (rs.next()) {
+
+                    Date inicioSQL = rs.getDate("fechaInicio");
+                    Date vencimientoSQL = rs.getDate("fechaVencimiento");
+
+                    LocalDate fechaInicio = inicioSQL != null
+                            ? inicioSQL.toLocalDate() : null;
+
+                    LocalDate fechaVencimiento = vencimientoSQL != null
+                            ? vencimientoSQL.toLocalDate() : null;
+
+                    resultado.add(new MembresiaReporte(
+                            rs.getInt("idSocio"),
+                            rs.getString("nombre"),
+                            rs.getString("apellido"),
+                            rs.getInt("idMembresia"),
+                            tipoMembresia.valueOf(rs.getString("tipo")),
+                            fechaInicio,
+                            fechaVencimiento,
+                            rs.getBigDecimal("precio"),
+                            estadoMembresia.valueOf(rs.getString("estado"))
+                    ));
+                }
+            }
+        }
+
+        return resultado;
     }
 
     // Obtener los datos necesarios para el reporte de membresías.
@@ -231,9 +294,7 @@ public class MembresiaDAO {
             ORDER BY m.idMembresia, s.idSocio
             """;
 
-        try (Connection conexion = Conexion.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
 
@@ -258,8 +319,8 @@ public class MembresiaDAO {
 
                 BigDecimal precio = rs.getBigDecimal("precio");
 
-                estadoMembresia estadoPersistido =
-                        estadoMembresia.valueOf(rs.getString("estado"));
+                estadoMembresia estadoPersistido
+                        = estadoMembresia.valueOf(rs.getString("estado"));
 
                 // Calcular el estado actual para el reporte.
                 estadoMembresia estadoActual = estadoPersistido;
@@ -293,5 +354,89 @@ public class MembresiaDAO {
         }
 
         return reporte;
+    }
+
+    // Consultar los datos del reporte de membresías por periodo y estado.
+    public List<MembresiaReporte> listarDatosReporte(
+            LocalDate desde,
+            LocalDate hasta,
+            estadoMembresia estadoFiltro)
+            throws SQLException, IOException {
+
+        if (desde == null || hasta == null) {
+            throw new IllegalArgumentException(
+                    "Debe especificar las fechas del reporte."
+            );
+        }
+
+        if (desde.isAfter(hasta)) {
+            throw new IllegalArgumentException(
+                    "La fecha inicial no puede ser posterior a la fecha final."
+            );
+        }
+
+        List<MembresiaReporte> reporteCompleto = listarDatosReporte();
+        List<MembresiaReporte> resultado = new ArrayList<>();
+
+        for (MembresiaReporte membresia : reporteCompleto) {
+
+            LocalDate fechaInicio = membresia.getFechaInicio();
+
+            // Filtrar por fecha de inicio.
+            if (fechaInicio == null
+                    || fechaInicio.isBefore(desde)
+                    || fechaInicio.isAfter(hasta)) {
+                continue;
+            }
+
+            // Si se seleccionó un estado, aplicar el filtro.
+            if (estadoFiltro != null
+                    && membresia.getEstado() != estadoFiltro) {
+                continue;
+            }
+
+            resultado.add(membresia);
+        }
+
+        return resultado;
+    }
+
+    // Verificar si una membresía corresponde a una renovación.
+    public boolean tieneMembresiaAnterior(int idMembresia)
+            throws SQLException, IOException {
+
+        String sql = """
+        SELECT EXISTS (
+            SELECT 1
+            FROM sociomembresia actual
+            INNER JOIN membresia membresiaActual
+                ON actual.idMembresia = membresiaActual.idMembresia
+            INNER JOIN sociomembresia anterior
+                ON anterior.idSocio = actual.idSocio
+            INNER JOIN membresia membresiaAnterior
+                ON anterior.idMembresia = membresiaAnterior.idMembresia
+            WHERE actual.idMembresia = ?
+              AND (
+                  membresiaAnterior.fechaInicio < membresiaActual.fechaInicio
+                  OR (
+                      membresiaAnterior.fechaInicio = membresiaActual.fechaInicio
+                      AND membresiaAnterior.idMembresia < membresiaActual.idMembresia
+                  )
+              )
+        ) AS esRenovacion
+        """;
+
+        try (Connection conexion = Conexion.conectar(); PreparedStatement ps = conexion.prepareStatement(sql)) {
+
+            ps.setInt(1, idMembresia);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean("esRenovacion");
+                }
+            }
+        }
+
+        return false;
     }
 }
