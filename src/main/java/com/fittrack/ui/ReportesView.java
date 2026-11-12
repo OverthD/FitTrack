@@ -136,15 +136,20 @@ public class ReportesView {
     }
 
     private void generar() {
+
         LocalDate desde = dpDesde.getValue();
         LocalDate hasta = dpHasta.getValue();
+
         if (tipoActual() != TipoReporte.SOCIOS_ACTIVOS) {
             if (desde == null || hasta == null || hasta.isBefore(desde)) {
-                DialogoFitTrack.advertencia(Ui.ventana(raiz), "Periodo no válido",
+                DialogoFitTrack.advertencia(
+                        Ui.ventana(raiz),
+                        "Periodo no válido",
                         "Elige las dos fechas y que la final no sea anterior a la inicial.");
                 return;
             }
         }
+
         reporteActual = servicio.reporte(
                 tipoActual(), desde, hasta, cmbFiltro.getValue());
 
@@ -156,23 +161,60 @@ public class ReportesView {
 
             final int indice = i;
             String nombreColumna = reporte.columnas().get(i);
+            String nombre = nombreColumna.toLowerCase().trim();
 
             var columna = Ui.<List<String>>columna(
                     nombreColumna,
-                    fila -> fila.get(indice));
+                    fila -> {
+                        String valor = fila.get(indice);
 
-            columna.setMinWidth(90);
-            columna.setPrefWidth(130);
-            columna.setMaxWidth(300);
+                        // Mostrar el ID del socio con el formato oficial.
+                        if (nombre.equals("idsocio")
+                        || nombre.equals("id socio")) {
+                            try {
+                                return Formato.idSocio(
+                                        Formato.leerIdSocio(valor));
+                            } catch (Exception ex) {
+                                return valor;
+                            }
+                        }
+
+                        return valor;
+                    });
+
+            double ancho = switch (nombre) {
+                case "id", "idempleado", "id empleado" ->
+                    90;
+                case "idsocio", "id socio" ->
+                    125;
+                case "nombre", "apellido" ->
+                    150;
+                case "correo", "correo electrónico", "correoelectronico" ->
+                    250;
+                case "teléfono", "telefono" ->
+                    140;
+                case "estado", "método de pago", "metodo de pago" ->
+                    145;
+                default ->
+                    140;
+            };
+
+            columna.setMinWidth(ancho);
+            columna.setPrefWidth(ancho);
+            columna.setMaxWidth(ancho);
 
             tabla.getColumns().add(columna);
         }
 
-// Permitir desplazamiento horizontal cuando sea necesario.
+        // Mantener anchos estables al cambiar entre reportes.
         tabla.setColumnResizePolicy(
                 TableView.UNCONSTRAINED_RESIZE_POLICY);
-        tabla.setPlaceholder(new Label("No hay datos para este reporte."));
-        tabla.setItems(FXCollections.observableArrayList(reporte.filas()));
+
+        tabla.setPlaceholder(
+                new Label("No hay datos para este reporte."));
+
+        tabla.setItems(
+                FXCollections.observableArrayList(reporte.filas()));
     }
 
     private void exportarPDF() {

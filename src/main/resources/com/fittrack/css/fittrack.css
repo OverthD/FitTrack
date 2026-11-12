@@ -294,3 +294,136 @@
 
 .table-view .table-row-cell:empty,
 .pantalla-oscura .table-view .table-row-cell:empty { -fx-background-color: transparent; -fx-border-color: transparent; }
+
+/* ==========================================================
+   ESTANDARIZACIÓN: TODAS LAS PANTALLAS INTERNAS EN TEMA CLARO
+   ========================================================== */
+
+/* Fondo y textos */
+.pantalla-oscura {
+    -fx-background-color: -ft-fondo;
+    -fx-padding: 24 28;
+}
+
+.pantalla-oscura .label {
+    -fx-text-fill: -ft-texto;
+}
+
+.pantalla-oscura .titulo-pantalla {
+    -fx-text-fill: -ft-azul-marino;
+}
+
+.pantalla-oscura .encabezado-ruta {
+    -fx-text-fill: -ft-texto-sec;
+}
+
+.pantalla-oscura .texto-secundario,
+.pantalla-oscura .dato-fila-etiqueta,
+.pantalla-oscura .dato-etiqueta {
+    -fx-text-fill: -ft-texto-sec;
+}
+
+.pantalla-oscura .dato-fila-valor,
+.pantalla-oscura .dato-valor {
+    -fx-text-fill: -ft-texto;
+}
+
+/* Paneles y tarjetas */
+.pantalla-oscura .panel,
+.pantalla-oscura .tarjeta-dato {
+    -fx-background-color: -ft-panel;
+    -fx-border-color: -ft-borde;
+}
+
+/* Tablas */
+.pantalla-oscura .table-view {
+    -fx-background-color: -ft-panel;
+    -fx-border-color: -ft-borde;
+}
+
+.pantalla-oscura .table-view .column-header,
+.pantalla-oscura .table-view .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent -ft-borde transparent;
+}
+
+.pantalla-oscura .table-view .column-header .label {
+    -fx-text-fill: -ft-texto-sec;
+}
+
+.pantalla-oscura .table-view .table-row-cell {
+    -fx-background-color: -ft-panel;
+    -fx-border-color: transparent transparent -ft-borde transparent;
+}
+
+.pantalla-oscura .table-view .table-row-cell:hover,
+.pantalla-oscura .table-view .table-row-cell:selected {
+    -fx-background-color: -ft-fondo;
+}
+
+.pantalla-oscura .table-view .table-cell {
+    -fx-text-fill: -ft-texto;
+}
+
+.pantalla-oscura .table-view .placeholder .label {
+    -fx-text-fill: -ft-texto-sec;
+}
+
+/* Campos que anteriormente utilizaban tema oscuro */
+.campo-oscuro {
+    -fx-background-color: -ft-panel;
+    -fx-border-color: -ft-borde;
+    -fx-text-fill: -ft-texto;
+    -fx-prompt-text-fill: derive(-ft-texto-sec, 20%);
+}
+
+.campo-oscuro:focused {
+    -fx-border-color: -ft-azul-medio;
+}
+
+.pantalla-oscura .combo-box.campo-oscuro .list-cell {
+    -fx-text-fill: -ft-texto;
+    -fx-background-color: transparent;
+}
+
+.pantalla-oscura .date-picker.campo-oscuro .text-field {
+    -fx-text-fill: -ft-texto;
+}
+
+.pantalla-oscura .combo-box.campo-oscuro .arrow,
+.pantalla-oscura .date-picker.campo-oscuro .arrow {
+    -fx-background-color: -ft-texto-sec;
+}
+
+/* Botones secundarios */
+.pantalla-oscura .boton-secundario {
+    -fx-background-color: -ft-fondo;
+    -fx-border-color: -ft-borde;
+    -fx-text-fill: -ft-azul-marino;
+}
+
+.pantalla-oscura .boton-secundario:hover {
+    -fx-background-color: -ft-borde;
+}
+
+/* Filtros */
+.pantalla-oscura .pildora {
+    -fx-background-color: -ft-panel;
+    -fx-border-color: -ft-borde;
+    -fx-text-fill: -ft-azul-marino;
+}
+
+.pantalla-oscura .pildora:selected {
+    -fx-background-color: -ft-azul-marino;
+    -fx-border-color: -ft-azul-marino;
+    -fx-text-fill: white;
+}
+
+/* Gráficas */
+.chart-horizontal-grid-lines {
+    -fx-stroke: -ft-borde;
+}
+
+.axis {
+    -fx-tick-label-fill: -ft-texto-sec;
+}
