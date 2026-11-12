@@ -33,8 +33,8 @@ public class HistorialPagosView {
         VBox raiz = new VBox(16);
         raiz.getStyleClass().add("pantalla-clara");
 
-        Button btnRegistrar = Ui.boton("Registrar pago", "boton-primario");
-        btnRegistrar.setOnAction(e -> nav.irRegistrarPago(null, null));
+        //Button btnRegistrar = Ui.boton("Registrar pago", "boton-primario");
+        //btnRegistrar.setOnAction(e -> nav.irRegistrarPago(null, null));
 
         txtBuscar.getStyleClass().add("campo");
         txtBuscar.setPromptText("Buscar por ID o nombre");
@@ -57,7 +57,7 @@ public class HistorialPagosView {
         ));
         tabla.getColumns().add(Ui.<FilaPago>columna("Método", f -> f.pago().getMetodoPago()));
 
-        raiz.getChildren().addAll(Ui.filaEncabezado("Pagos", "Historial de pagos", btnRegistrar),
+        raiz.getChildren().addAll(Ui.filaEncabezado("Pagos", "Historial de pagos"),
                 new HBox(10, txtBuscar, btnBuscar), tabla);
         if (filtroInicial != null) {
             txtBuscar.setText(filtroInicial);

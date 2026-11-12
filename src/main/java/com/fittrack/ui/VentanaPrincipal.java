@@ -26,25 +26,28 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
 /**
- * Ventana principal: menú lateral fijo + zona central donde se cambian las pantallas.
- * Implementa Navegador: las pantallas le piden cambiar de pantalla por medio de esa interfaz.
+ * Ventana principal: menú lateral fijo + zona central donde se cambian las
+ * pantallas. Implementa Navegador: las pantallas le piden cambiar de pantalla
+ * por medio de esa interfaz.
  */
 public class VentanaPrincipal implements Navegador {
 
-    private record Item(String clave, String texto) { }
+    private record Item(String clave, String texto) {
+
+    }
 
     private static final List<Item> RECEPCION = List.of(
-        new Item("validar-acceso", "Validar acceso"),
-        new Item("socios", "Socios"),
-        new Item("membresias", "Membresías"),
-        new Item("pagos", "Pagos"),
-        new Item("accesos", "Accesos"));
+            new Item("validar-acceso", "Validar acceso"),
+            new Item("socios", "Socios"),
+            new Item("membresias", "Membresías"),
+            new Item("pagos", "Pagos"),
+            new Item("accesos", "Accesos"));
 
     private static final List<Item> ADMINISTRACION = List.of(
-        new Item("ingresos", "Ingresos y ventas"),
-        new Item("reportes", "Reportes"),
-        new Item("usuarios", "Usuarios"),
-        new Item("respaldo", "Respaldo"));
+            new Item("ingresos", "Ingresos y ventas"),
+            new Item("reportes", "Reportes"),
+            new Item("usuarios", "Usuarios"),
+            new Item("respaldo", "Respaldo"));
 
     private static final Set<String> SOLO_ADMIN = Set.of("ingresos", "reportes", "usuarios", "respaldo");
 
@@ -60,6 +63,10 @@ public class VentanaPrincipal implements Navegador {
         this.servicio = servicio;
         this.alCerrarSesion = alCerrarSesion;
         raiz.setLeft(construirMenu());
+
+        contenido.setAlignment(Pos.TOP_LEFT);
+        contenido.setMinSize(0, 0);
+
         raiz.setCenter(contenido);
     }
 
@@ -70,25 +77,34 @@ public class VentanaPrincipal implements Navegador {
     // ------------------------------------------------------------------
     // Navegación
     // ------------------------------------------------------------------
-
     @Override
     public void ir(String clave) {
         if (SOLO_ADMIN.contains(clave) && usuario.getRol() != rolUsuario.ADMINISTRADOR) {
             DialogoFitTrack.advertencia(raiz.getScene().getWindow(), "Sin permiso",
-                "Esta sección es solo para administradores.");
+                    "Esta sección es solo para administradores.");
             return;
         }
         Node vista = switch (clave) {
-            case "validar-acceso" -> new ValidarAccesoView(servicio, this, null).crearVista();
-            case "socios" -> new SociosView(servicio, this).crearVista();
-            case "membresias" -> new ProximasVencerView(servicio, this).crearVista();
-            case "pagos" -> new HistorialPagosView(servicio, this, null).crearVista();
-            case "accesos" -> new HistorialAccesosView(servicio, this, null).crearVista();
-            case "ingresos" -> new IngresosView(servicio).crearVista();
-            case "reportes" -> new ReportesView(servicio).crearVista();
-            case "usuarios" -> new UsuariosView(servicio).crearVista();
-            case "respaldo" -> new RespaldoView(servicio).crearVista();
-            default -> throw new IllegalArgumentException("Pantalla desconocida: " + clave);
+            case "validar-acceso" ->
+                new ValidarAccesoView(servicio, this, null).crearVista();
+            case "socios" ->
+                new SociosView(servicio, this).crearVista();
+            case "membresias" ->
+                new ProximasVencerView(servicio, this).crearVista();
+            case "pagos" ->
+                new HistorialPagosView(servicio, this, null).crearVista();
+            case "accesos" ->
+                new HistorialAccesosView(servicio, this, null).crearVista();
+            case "ingresos" ->
+                new IngresosView(servicio).crearVista();
+            case "reportes" ->
+                new ReportesView(servicio).crearVista();
+            case "usuarios" ->
+                new UsuariosView(servicio).crearVista();
+            case "respaldo" ->
+                new RespaldoView(servicio).crearVista();
+            default ->
+                throw new IllegalArgumentException("Pantalla desconocida: " + clave);
         };
         mostrarVista(vista, clave);
     }
@@ -133,17 +149,40 @@ public class VentanaPrincipal implements Navegador {
         mostrarVista(new HistorialAccesosView(servicio, this, Formato.idSocio(idSocio)).crearVista(), "accesos");
     }
 
-    /** Muestra la pantalla dentro de un ScrollPane (por si la ventana es chica) y resalta el menú. */
+    /**
+     * Muestra la pantalla dentro de un ScrollPane (por si la ventana es chica)
+     * y resalta el menú.
+     */
     private void mostrarVista(Node vista, String claveMenu) {
+
+        // Permitir que la vista se adapte al ancho disponible.
+        if (vista instanceof Region region) {
+            region.setMaxWidth(Double.MAX_VALUE);
+        }
+
+        // Contenedor desplazable de la pantalla.
         ScrollPane scroll = new ScrollPane(vista);
+
         scroll.setFitToWidth(true);
-        scroll.setFitToHeight(true);
+        scroll.setFitToHeight(false);
+
+        scroll.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
         scroll.getStyleClass().add("scroll-pantalla");
+
+        // Mostrar la nueva pantalla.
         contenido.getChildren().setAll(scroll);
 
-        botones.values().forEach(b -> b.getStyleClass().remove("menu-item-activo"));
+        // Actualizar el elemento activo del menú.
+        botones.values().forEach(b
+                -> b.getStyleClass().remove("menu-item-activo")
+        );
+
         Button activo = botones.get(claveMenu);
+
         if (activo != null) {
             activo.getStyleClass().add("menu-item-activo");
         }
@@ -152,7 +191,6 @@ public class VentanaPrincipal implements Navegador {
     // ------------------------------------------------------------------
     // Menú lateral
     // ------------------------------------------------------------------
-
     private Node construirMenu() {
         VBox menu = new VBox(4);
         menu.getStyleClass().add("menu-lateral");
@@ -236,10 +274,10 @@ public class VentanaPrincipal implements Navegador {
 
     private void cerrarSesion() {
         boolean confirmado = DialogoFitTrack.confirmar(
-            raiz.getScene().getWindow(),
-            "Cerrar sesión",
-            "Se cerrará la sesión de " + usuario.getUsuario() + " en este equipo.",
-            "Cerrar sesión");
+                raiz.getScene().getWindow(),
+                "Cerrar sesión",
+                "Se cerrará la sesión de " + usuario.getUsuario() + " en este equipo.",
+                "Cerrar sesión");
         if (confirmado) {
             SesionUsuario.cerrar();
             alCerrarSesion.run();
